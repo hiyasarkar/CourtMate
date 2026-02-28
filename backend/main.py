@@ -1,9 +1,9 @@
+from dotenv import load_dotenv
+load_dotenv()  # This reads your .env file before other imports
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from routers import cases, ai, analytics
-from dotenv import load_dotenv
-
-load_dotenv()  # This reads your .env file
 
 app = FastAPI(title='CourtMate AI API')
 

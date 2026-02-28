@@ -1,39 +1,51 @@
-import { useAuth0 } from "@auth0/auth0-react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "../lib/supabase";
 
 const Signup = () => {
-  const { loginWithRedirect, isLoading } = useAuth0();
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        Loading...
-      </div>
-    );
-  }
-
-  const handleEmailSignup = () => {
-    loginWithRedirect({
-      authorizationParams: {
-        screen_hint: "signup",
-      },
+  const handleGoogleSignup = async () => {
+    setError("");
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: `${window.location.origin}/file-case` },
     });
+    if (error) setError(error.message);
   };
 
-  const handleGoogleSignup = () => {
-    loginWithRedirect({
-      authorizationParams: {
-        connection: "google-oauth2",
+  const handleSignup = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+    setSuccess("");
+
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { full_name: name },
       },
     });
+
+    if (error) {
+      setError(error.message);
+    } else {
+      setSuccess("Account created! Check your email for a confirmation link, then log in.");
+    }
+    setLoading(false);
   };
 
-const navigate = useNavigate();
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center px-4">
       <div className="bg-white w-full max-w-md rounded-2xl shadow-xl p-8">
-        
-        {/* Heading */}
+
         <h2 className="text-2xl font-bold text-center">
           Create your account
         </h2>
@@ -41,6 +53,17 @@ const navigate = useNavigate();
         <p className="text-gray-500 text-sm text-center mt-2 mb-6">
           Start preparing your case in minutes with our AI-powered legal assistant.
         </p>
+
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-600 text-sm rounded-xl px-4 py-3 mb-4">
+            {error}
+          </div>
+        )}
+        {success && (
+          <div className="bg-green-50 border border-green-200 text-green-700 text-sm rounded-xl px-4 py-3 mb-4">
+            {success}
+          </div>
+        )}
 
         {/* Google Button */}
         <button
@@ -52,63 +75,54 @@ const navigate = useNavigate();
             alt="google"
             className="w-5 h-5"
           />
-          <span className="text-sm font-medium">
-            Sign up with Google
-          </span>
+          <span className="text-sm font-medium">Sign up with Google</span>
         </button>
 
-        {/* Divider */}
         <div className="flex items-center my-6">
           <div className="flex-1 h-px bg-gray-300"></div>
           <span className="px-3 text-gray-400 text-sm">or</span>
           <div className="flex-1 h-px bg-gray-300"></div>
         </div>
 
-        {/* Form Fields (UI only, Auth0 handles actual signup) */}
-        <div className="space-y-4">
+        <form onSubmit={handleSignup} className="space-y-4">
 
           <input
             type="text"
             placeholder="Enter your full name"
             className="w-full border rounded-full px-4 py-3 focus:outline-none focus:ring-2 focus:ring-orange-400"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
           />
 
           <input
             type="email"
             placeholder="Enter your email"
             className="w-full border rounded-full px-4 py-3 focus:outline-none focus:ring-2 focus:ring-orange-400"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
           />
 
           <input
             type="password"
-            placeholder="Create a password"
+            placeholder="Create a password (min 6 chars)"
             className="w-full border rounded-full px-4 py-3 focus:outline-none focus:ring-2 focus:ring-orange-400"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            minLength={6}
           />
 
-          <div className="flex gap-4">
-            <select className="w-1/2 border rounded-full px-4 py-3 focus:outline-none focus:ring-2 focus:ring-orange-400">
-              <option>Select State</option>
-              <option>California</option>
-              <option>Texas</option>
-              <option>New York</option>
-            </select>
-
-            <select className="w-1/2 border rounded-full px-4 py-3 focus:outline-none focus:ring-2 focus:ring-orange-400">
-              <option>English</option>
-              <option>Spanish</option>
-            </select>
-          </div>
-
-          {/* Create Account Button */}
           <button
-            onClick={() => navigate("/login")}
-            className="w-full bg-orange-500 hover:bg-orange-600 text-white rounded-full py-3 font-semibold shadow-md transition"
+            type="submit"
+            disabled={loading}
+            className="w-full bg-orange-500 hover:bg-orange-600 text-white rounded-full py-3 font-semibold shadow-md transition disabled:opacity-60"
           >
-            Create Account
+            {loading ? "Creating account..." : "Create Account"}
           </button>
-        </div>
+        </form>
 
-        {/* Login Link */}
         <p className="text-center text-sm text-gray-500 mt-6">
           Already have an account?{" "}
           <span
@@ -119,7 +133,6 @@ const navigate = useNavigate();
           </span>
         </p>
 
-        {/* Footer */}
         <p className="text-xs text-gray-400 text-center mt-4">
           🔒 Your data is encrypted and secure.
         </p>

@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { useAuth0 } from '@auth0/auth0-react'
 import { useNavigate } from 'react-router-dom'
 import Navbar from '../components/Navbar.jsx'
 import Footer from '../components/Footer.jsx'
@@ -17,8 +16,10 @@ const STEPS = [
 ]
 
 export default function FileCasePage() {
-  const { isAuthenticated, isLoading, loginWithRedirect, user } = useAuth0()
   const navigate = useNavigate()
+
+  const [user, setUser] = useState(null)
+  const [isLoading, setIsLoading] = useState(true)
 
   const [step, setStep] = useState(1)
   const [grievanceData, setGrievanceData] = useState(null)
@@ -27,32 +28,43 @@ export default function FileCasePage() {
   const [analyzing, setAnalyzing] = useState(false)
   const [analyzeError, setAnalyzeError] = useState('')
 
-  // After Auth0 login completes, upsert the user profile into Supabase.
-  // Auth0 user.sub looks like "google-oauth2|1234..." — we use it as the TEXT id.
-  // This runs once when the user becomes authenticated.
   useEffect(() => {
-    if (!isAuthenticated || !user) return
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null)
+      setIsLoading(false)
 
-    supabase
-      .from('profiles')
-      .upsert(
-        {
-          id: user.sub,
-          full_name: user.name,
-          email: user.email,
-          picture: user.picture,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'id' }
-      )
-      .then(({ error }) => {
-        if (error) {
-          console.warn('Supabase profile save warning:', error.message)
-        }
-      })
-  }, [isAuthenticated, user])
+      // Save/update profile in Supabase once we know the user
+      if (session?.user) {
+        const u = session.user
+        supabase
+          .from('profiles')
+          .upsert(
+            {
+              id: u.id,
+              full_name: u.user_metadata?.full_name || u.email,
+              email: u.email,
+              picture: u.user_metadata?.avatar_url || null,
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: 'id' }
+          )
+          .then(({ error }) => {
+            if (error) console.warn('Supabase profile save warning:', error.message)
+          })
+      }
+    })
 
-  // Show loading state while Auth0 is initialising
+    // Listen for auth state changes (e.g. OAuth redirect back)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null)
+      setIsLoading(false)
+    })
+
+    return () => subscription.unsubscribe()
+  }, [])
+
+  // Show loading state while checking session
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -62,7 +74,7 @@ export default function FileCasePage() {
   }
 
   // Not authenticated — show inline login prompt
-  if (!isAuthenticated) {
+  if (!user) {
     return (
       <div>
         <Navbar />
@@ -74,7 +86,7 @@ export default function FileCasePage() {
             </div>
             <h2 className="text-2xl font-bold text-gray-800 text-center">Sign in to file your case</h2>
             <p className="text-gray-500 text-sm text-center">
-              Secure login powered by Auth0. Your profile is automatically saved.
+              Secure login powered by Supabase. Your profile is automatically saved.
             </p>
             <button
               onClick={() => navigate('/login')}
@@ -124,11 +136,11 @@ export default function FileCasePage() {
       setAnalysisResult(result)
       setStep(3)
 
-      // Save case to Supabase — non-blocking, won't crash the UI if it fails
+      // Save case to Supabase — non-blocking
       supabase
         .from('cases')
         .insert({
-          user_id: user?.sub || 'anonymous',
+          user_id: user.id,
           legal_category: formData.legal_category,
           defendant_name: formData.defendant_name,
           claim_amount: formData.claim_amount,
@@ -165,6 +177,8 @@ export default function FileCasePage() {
     }
   }
 
+  const displayName = user.user_metadata?.full_name || user.email
+
   return (
     <div>
       <Navbar />
@@ -176,7 +190,7 @@ export default function FileCasePage() {
             File Your <span className="text-orange-500">Consumer Case</span>
           </h1>
           <p className="text-gray-500 mt-2 text-sm">
-            Welcome, {user?.name}. Follow the steps below to build your case.
+            Welcome, {displayName}. Follow the steps below to build your case.
           </p>
         </div>
 

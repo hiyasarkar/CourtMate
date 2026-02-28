@@ -8,7 +8,7 @@ import httpx
 from fastapi import APIRouter
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
-import google.generativeai as genai
+from google import genai
 from reportlab.lib.pagesizes import A4
 from reportlab.platypus import SimpleDocTemplate, Paragraph as RLParagraph, Spacer, HRFlowable
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -16,10 +16,16 @@ from reportlab.lib import colors
 
 router = APIRouter()
 
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-model = genai.GenerativeModel("gemini-1.5-flash")
-
+GEMINI_MODEL = "gemini-2.5-flash"
 INDIANKANOON_TOKEN = os.getenv("INDIANKANOON_TOKEN", "")
+
+_gemini = None
+
+def get_gemini():
+    global _gemini
+    if _gemini is None:
+        _gemini = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
+    return _gemini
 
 
 class CaseData(BaseModel):
@@ -90,7 +96,7 @@ Respond ONLY with valid JSON — no markdown, no code fences:
 }}"""
 
     try:
-        response = model.generate_content(prompt)
+        response = get_gemini().models.generate_content(model=GEMINI_MODEL, contents=prompt)
         raw = response.text.strip()
         raw = re.sub(r"^```json\s*|^```\s*|```$", "", raw, flags=re.MULTILINE).strip()
         result = json.loads(raw)

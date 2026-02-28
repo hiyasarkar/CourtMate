@@ -1,11 +1,30 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth0 } from "@auth0/auth0-react";
+import { supabase } from "../lib/supabase";
 import Logo from "../assets/Logo.png";
 
 const Navbar = () => {
   const navigate = useNavigate();
-  const { isAuthenticated, logout, user } = useAuth0();
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+    });
+
+    // Listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    navigate("/");
+  };
 
   return (
     <div>
@@ -32,19 +51,17 @@ const Navbar = () => {
         </nav>
 
         <div className="flex items-center gap-4  mx-8">
-          {isAuthenticated ? (
+          {user ? (
             <>
-              {user?.picture && (
+              {user.user_metadata?.avatar_url && (
                 <img
-                  src={user.picture}
-                  alt={user.name}
+                  src={user.user_metadata.avatar_url}
+                  alt={user.user_metadata?.full_name || user.email}
                   className="w-8 h-8 rounded-full border border-orange-400"
                 />
               )}
               <button
-                onClick={() =>
-                  logout({ logoutParams: { returnTo: window.location.origin } })
-                }
+                onClick={handleSignOut}
                 className="text-gray-700 font-medium hover:text-orange-500 cursor-pointer transition transform hover:scale-110 duration-300 whitespace-nowrap"
               >
                 Sign Out

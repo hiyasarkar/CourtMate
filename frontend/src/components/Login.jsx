@@ -1,35 +1,36 @@
 import { useState } from "react";
-import { useAuth0 } from "@auth0/auth0-react";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "../lib/supabase";
 
 const Login = () => {
-  const { loginWithRedirect } = useAuth0();
-
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
-  const handleGoogleLogin = () => {
-    loginWithRedirect({
-      authorizationParams: {
-        connection: "google-oauth2",
-        screen_hint: "login",
-      },
-      appState: { returnTo: "/file-case" },
+  const handleGoogleLogin = async () => {
+    setError("");
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: `${window.location.origin}/file-case` },
     });
+    if (error) setError(error.message);
   };
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    // Use Auth0's Universal Login — passes the email as a hint so it's pre-filled.
-    // The direct /oauth/token password grant is blocked for SPA apps by Auth0 by default.
-    loginWithRedirect({
-      authorizationParams: {
-        login_hint: email,
-      },
-      appState: { returnTo: "/file-case" },
-    });
+    setLoading(true);
+    setError("");
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) {
+      setError(error.message);
+    } else {
+      navigate("/file-case");
+    }
+    setLoading(false);
   };
-  const navigate = useNavigate();
+
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center px-4">
       <div className="bg-white w-full max-w-md rounded-2xl shadow-xl p-8">
@@ -41,6 +42,12 @@ const Login = () => {
         <p className="text-gray-500 text-sm text-center mt-2 mb-6">
           Log in to continue your case or start a new one.
         </p>
+
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-600 text-sm rounded-xl px-4 py-3 mb-4">
+            {error}
+          </div>
+        )}
 
         {/* Google Login */}
         <button
@@ -68,6 +75,7 @@ const Login = () => {
             className="w-full border rounded-full px-4 py-3 focus:outline-none focus:ring-2 focus:ring-orange-400"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            required
           />
 
           <input
@@ -76,13 +84,15 @@ const Login = () => {
             className="w-full border rounded-full px-4 py-3 focus:outline-none focus:ring-2 focus:ring-orange-400"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            required
           />
 
           <button
             type="submit"
-            className="w-full bg-orange-500 hover:bg-orange-600 text-white rounded-full py-3 font-semibold shadow-md transition"
+            disabled={loading}
+            className="w-full bg-orange-500 hover:bg-orange-600 text-white rounded-full py-3 font-semibold shadow-md transition disabled:opacity-60"
           >
-            Log In
+            {loading ? "Logging in..." : "Log In"}
           </button>
         </form>
 
