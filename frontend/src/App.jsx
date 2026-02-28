@@ -1,21 +1,23 @@
 import "./App.css"
 import React from 'react'
+import { Routes, Route } from 'react-router-dom'
 import LandingPage from "./pages/LandingPage.jsx"
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import About from "./pages/About.jsx"
 import Contact from "./pages/Contact.jsx"
+import FileCasePage from "./pages/FileCasePage.jsx"
+import Login from "./components/Login.jsx"
+import Signup from "./pages/signup.jsx"
 
 const App = () => {
   return (
-    <>
-      <Router>
-        <Routes>
-          <Route path = "/" element = {<LandingPage/>}/>
-          <Route path = "/about" element = {<About/>}/>
-          <Route path = "/contact" element = {<Contact/>}/>
-        </Routes>
-      </Router>
-    </>
+    <Routes>
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/about" element={<About />} />
+      <Route path="/contact" element={<Contact />} />
+      <Route path="/file-case" element={<FileCasePage />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/signup" element={<Signup />} />
+    </Routes>
   )
 }
 

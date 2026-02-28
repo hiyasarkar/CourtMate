@@ -1,36 +1,68 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth0 } from "@auth0/auth0-react";
 import Logo from "../assets/Logo.png";
 
 const Navbar = () => {
+  const navigate = useNavigate();
+  const { isAuthenticated, logout, user } = useAuth0();
+
   return (
     <div>
       <header className="w-full bg-gray-100 py-6 flex justify-center mx-10">
         <nav
-          className="w-[90%] max-w-6xl flex items-center justify-between 
+          className="w-[90%] max-w-6xl flex items-center justify-between
       bg-white px-6 py-3 rounded-full border border-orange-600 shadow-md"
         >
-          <div className="flex items-center gap-3">
-            <img src={Logo}></img>
+          <div
+            className="flex items-center gap-3 cursor-pointer"
+            onClick={() => navigate("/")}
+          >
+            <img src={Logo} alt="CourtMate Logo" />
             <span className="font-semibold text-gray-800">
               CourtMate Unified
             </span>
           </div>
 
           <div className="hidden md:flex items-center text-gray-700 font-medium gap-16">
-            <Link href="/" detail="Home" />
-            <Link href="/about" detail="About Us" />
-            <Link href="/contact" detail="Contact Us" />
+            <NavLink href="/" detail="Home" />
+            <NavLink href="/about" detail="About Us" />
+            <NavLink href="/contact" detail="Contact Us" />
           </div>
         </nav>
 
         <div className="flex items-center gap-4  mx-8">
-          <button className="text-gray-700 font-medium hover:text-orange-500 cursor-pointer transition transform hover:scale-110 duration-300 whitespace-nowrap">
-            Sign In
-          </button>
+          {isAuthenticated ? (
+            <>
+              {user?.picture && (
+                <img
+                  src={user.picture}
+                  alt={user.name}
+                  className="w-8 h-8 rounded-full border border-orange-400"
+                />
+              )}
+              <button
+                onClick={() =>
+                  logout({ logoutParams: { returnTo: window.location.origin } })
+                }
+                className="text-gray-700 font-medium hover:text-orange-500 cursor-pointer transition transform hover:scale-110 duration-300 whitespace-nowrap"
+              >
+                Sign Out
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={() => navigate("/login")}
+              className="text-gray-700 font-medium hover:text-orange-500 cursor-pointer transition transform hover:scale-110 duration-300 whitespace-nowrap"
+            >
+              Sign In
+            </button>
+          )}
 
           <button
-            className="px-5 py-2 bg-orange-500 text-white rounded-2xl 
-          font-semibold shadow-md hover:bg-orange-600 hover:scale-105 
+            onClick={() => navigate("/file-case")}
+            className="px-5 py-2 bg-orange-500 text-white rounded-2xl
+          font-semibold shadow-md hover:bg-orange-600 hover:scale-105
           transition transform duration-200 whitespace-nowrap cursor-pointer"
           >
             Start Case
@@ -41,7 +73,7 @@ const Navbar = () => {
   );
 };
 
-const Link = ({ href, detail }) => {
+const NavLink = ({ href, detail }) => {
   return (
     <a
       href={href}
