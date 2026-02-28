@@ -5,7 +5,9 @@ import container from "../assets/Container.png";
 import right from "../assets/right.png";
 import Navbar from "../components/Navbar.jsx";
 import Footer from "../components/Footer.jsx";
+import { useNavigate } from "react-router-dom";
 function App() {
+  const navigate = useNavigate();
   return (
     <div>
       <Navbar/>
@@ -28,7 +30,7 @@ function App() {
       {/* <div className="mt-10 grid md:grid-cols-2 gap-1 items-center justify-center"> */}
       <div className="mt-10 flex justify-center items-center gap-6">
         <div className="h-12 w-50 rounded-xl bg-orange-400 py-3 transition transform hover:scale-105 duration-300">
-          <button className=" text-white font-bold cursor-pointer ">
+          <button onClick={() => navigate('/file-case')} className=" text-white font-bold cursor-pointer ">
             Start My Case Free →
           </button>
         </div>
@@ -127,7 +129,7 @@ function App() {
           lawyer. Start your free case analysis today.
         </p>
         <div className=" mt-7 h-12 w-50 rounded-2xl bg-white py-3 transition transform hover:scale-105 duration-300 mx-auto">
-          <button className=" text-orange-400 font-bold cursor-pointer ">
+          <button onClick={() => navigate('/file-case')} className=" text-orange-400 font-bold cursor-pointer ">
             Start My Case →
           </button>
         </div>
