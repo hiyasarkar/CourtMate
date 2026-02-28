@@ -85,6 +85,13 @@ const Navbar = () => {
           >
             Start Case
           </button>
+          <button
+            onClick={() => navigate("/lawyersignup")}
+            className="px-5 py-2 bg-orange-500 text-white rounded-2xl
+            font-semibold shadow-md hover:bg-orange-600 hover:scale-105 transition transform duration-200 whitespace-nowrap cursor-pointer"
+          >
+            Create profile as a lawyer
+          </button>
         </div>
       </header>
     </div>
