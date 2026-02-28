@@ -14,7 +14,9 @@ const Navbar = () => {
     });
 
     // Listen for auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
     });
 
@@ -31,7 +33,7 @@ const Navbar = () => {
       <header className="w-full bg-gray-100 py-6 flex justify-center mx-10">
         <nav
           className="w-[90%] max-w-6xl flex items-center justify-between
-      bg-white px-6 py-3 rounded-full border border-orange-600 shadow-md"
+          bg-white px-6 py-3 rounded-full border border-orange-600 shadow-md"
         >
           <div
             className="flex items-center gap-3 cursor-pointer"
@@ -50,7 +52,7 @@ const Navbar = () => {
           </div>
         </nav>
 
-        <div className="flex items-center gap-4  mx-8">
+        <div className="flex items-center gap-4 mx-8">
           {user ? (
             <>
               {user.user_metadata?.avatar_url && (
@@ -79,8 +81,7 @@ const Navbar = () => {
           <button
             onClick={() => navigate("/file-case")}
             className="px-5 py-2 bg-orange-500 text-white rounded-2xl
-          font-semibold shadow-md hover:bg-orange-600 hover:scale-105
-          transition transform duration-200 whitespace-nowrap cursor-pointer"
+            font-semibold shadow-md hover:bg-orange-600 hover:scale-105 transition transform duration-200 whitespace-nowrap cursor-pointer"
           >
             Start Case
           </button>
