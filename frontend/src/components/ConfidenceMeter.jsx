@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { PieChart, Pie, Cell } from 'recharts'
 import { Download, Mic, AlertTriangle, CheckCircle, Users } from 'lucide-react'
 
+import { supabase } from '../lib/supabase'
+
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL
 
 export default function ConfidenceMeter({ caseData, analysisResult }) {
@@ -10,6 +12,9 @@ export default function ConfidenceMeter({ caseData, analysisResult }) {
   const [audioLoading, setAudioLoading] = useState(false)
   const [pdfLoading, setPdfLoading] = useState(false)
   const [audioError, setAudioError] = useState('')
+  const [suggestedLawyers, setSuggestedLawyers] = useState([])
+  const [showLawyers, setShowLawyers] = useState(false)
+  const [loadingLawyers, setLoadingLawyers] = useState(false)
 
   // Gauge semicircle data
   const gaugeData = [
@@ -79,6 +84,40 @@ export default function ConfidenceMeter({ caseData, analysisResult }) {
       alert('PDF download failed. Check that the backend is running.')
     } finally {
       setPdfLoading(false)
+    }
+  }
+
+  async function handleFindLawyers() {
+    setShowLawyers(true)
+    setLoadingLawyers(true)
+    try {
+      const caseType = caseData?.legal_category || ''
+      // Try to find lawyers matching the case type domain
+      // If we don't have matching ones, we can just fetch some verified lawyers
+      let { data, error } = await supabase
+        .from('lawyers')
+        .select('*')
+        .not('reg_no', 'is', null)
+        .ilike('domain', `%${caseType}%`)
+        .limit(3)
+        
+      if (error) throw error
+
+      // Fallback if no exact domain match
+      if (!data || data.length === 0) {
+        const fallback = await supabase
+          .from('lawyers')
+          .select('*')
+          .not('reg_no', 'is', null)
+          .limit(3)
+        data = fallback.data
+      }
+
+      setSuggestedLawyers(data || [])
+    } catch (err) {
+      console.error('Error fetching lawyers:', err.message)
+    } finally {
+      setLoadingLawyers(false)
     }
   }
 
@@ -216,7 +255,7 @@ export default function ConfidenceMeter({ caseData, analysisResult }) {
 
       {/* Lawyer Bridge — shown when complexity is Complex or score is low */}
       {(complexity === 'Complex' || confidence_score < 50) && (
-        <div className="bg-orange-50 border-2 border-orange-400 rounded-2xl p-6 flex flex-col gap-3">
+        <div className="bg-orange-50 border-2 border-orange-400 rounded-2xl p-6 flex flex-col gap-4">
           <div className="flex items-center gap-2">
             <AlertTriangle className="w-5 h-5 text-orange-600" />
             <h3 className="font-bold text-orange-800">This Case Has Legal Nuances</h3>
@@ -225,10 +264,54 @@ export default function ConfidenceMeter({ caseData, analysisResult }) {
             Your case is rated <b>{complexity}</b> with a {confidence_score}% confidence score.
             We recommend consulting a verified consumer rights lawyer before filing.
           </p>
-          <button className="flex items-center gap-2 px-5 py-2.5 bg-orange-500 text-white rounded-xl font-semibold hover:bg-orange-600 transition duration-200 cursor-pointer w-fit">
-            <Users className="w-4 h-4" />
-            Find a Verified Lawyer in Your City
-          </button>
+          
+          {!showLawyers ? (
+            <button 
+              onClick={handleFindLawyers}
+              className="flex items-center gap-2 px-5 py-2.5 bg-orange-500 text-white rounded-xl font-semibold hover:bg-orange-600 transition duration-200 cursor-pointer w-fit"
+            >
+              <Users className="w-4 h-4" />
+              Find a Verified Lawyer in Your City
+            </button>
+          ) : (
+            <div className="mt-2 bg-white rounded-xl p-4 shadow-inner border border-orange-200">
+              <h4 className="font-bold text-gray-800 mb-3 text-sm flex items-center gap-2">
+                <Users className="w-4 h-4 text-orange-500" /> Suggested Lawyers for '{caseData?.legal_category || 'Your Case'}'
+              </h4>
+              
+              {loadingLawyers ? (
+                <div className="text-sm text-gray-500 flex items-center gap-2">
+                  <span className="animate-spin h-4 w-4 border-2 border-orange-500 border-t-transparent rounded-full inline-block"></span>
+                  Finding verified experts...
+                </div>
+              ) : suggestedLawyers.length > 0 ? (
+                <div className="flex flex-col gap-3">
+                  {suggestedLawyers.map(lawyer => (
+                    <div key={lawyer.id} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg border border-gray-200">
+                      <div className="flex items-center gap-3">
+                        {lawyer.avatar_url ? (
+                           <img src={lawyer.avatar_url} alt={lawyer.full_name} className="w-10 h-10 rounded-full object-cover border border-orange-200" />
+                        ) : (
+                           <div className="w-10 h-10 rounded-full bg-orange-500 flex items-center justify-center text-white font-bold">
+                             {lawyer.full_name?.charAt(0).toUpperCase() || 'L'}
+                           </div>
+                        )}
+                        <div>
+                          <p className="font-bold text-gray-800 text-sm">{lawyer.full_name}</p>
+                          <p className="text-xs text-gray-500">{lawyer.domain || 'General Consumer Law'} • Verified ({lawyer.reg_no})</p>
+                        </div>
+                      </div>
+                      <button className="px-4 py-1.5 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 transition">
+                        Connect
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500">No matching lawyers found in our system right now.</p>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>

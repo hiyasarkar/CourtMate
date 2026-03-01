@@ -6,6 +6,8 @@ const Lawyersignup = () => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [regNo, setRegNo] = useState("");
+  const [domain, setDomain] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
@@ -15,29 +17,53 @@ const Lawyersignup = () => {
     setError("");
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: `${window.location.origin}/file-case` },
+      options: { redirectTo: `${window.location.origin}/profile` },
     });
     if (error) setError(error.message);
   };
 
   const handleSignup = async (e) => {
     e.preventDefault();
+    if (!regNo || !domain) {
+      setError("Registration number and Domain are required for Lawyers.");
+      return;
+    }
+
     setLoading(true);
     setError("");
     setSuccess("");
 
-    const { error } = await supabase.auth.signUp({
+    const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: { full_name: name },
+        data: { full_name: name, role: 'Lawyer' },
       },
     });
 
-    if (error) {
-      setError(error.message);
-    } else {
-      setSuccess("Account created! Check your email for a confirmation link, then log in.");
+    if (authError) {
+      setError(authError.message);
+      setLoading(false);
+      return;
+    }
+
+    // Insert into lawyers table
+    if (authData?.user) {
+      const { error: dbError } = await supabase.from('lawyers').insert([
+        {
+          id: authData.user.id,
+          full_name: name,
+          email: email,
+          reg_no: regNo,
+          domain: domain
+        }
+      ]);
+
+      if (dbError) {
+        setError(`Auth succeeded but DB insert failed: ${dbError.message}`);
+      } else {
+        setSuccess("Lawyer account created successfully! Check your email for a confirmation link, then log in.");
+      }
     }
     setLoading(false);
   };
@@ -94,6 +120,30 @@ const Lawyersignup = () => {
             onChange={(e) => setName(e.target.value)}
             required
           />
+
+          <input
+            type="text"
+            placeholder="Bar Council Registration No (e.g. MAH/1234/2021)"
+            className="w-full border rounded-full px-4 py-3 focus:outline-none focus:ring-2 focus:ring-orange-400"
+            value={regNo}
+            onChange={(e) => setRegNo(e.target.value)}
+            required
+          />
+
+          <select
+            className="w-full border rounded-full px-4 py-3 focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white"
+            value={domain}
+            onChange={(e) => setDomain(e.target.value)}
+            required
+          >
+            <option value="" disabled>Select Primary Domain</option>
+            <option value="Consumer Fraud">Consumer Fraud</option>
+            <option value="Medical Negligence">Medical Negligence</option>
+            <option value="Deficiency in Service">Deficiency in Service</option>
+            <option value="Unfair Trade Practice">Unfair Trade Practice</option>
+            <option value="Product Liability">Product Liability</option>
+            <option value="General Consumer Law">General Consumer Law</option>
+          </select>
 
           <input
             type="email"

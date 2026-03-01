@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import Logo from "../assets/Logo.png";
+import ProfileIcon from "./ProfileIcon";
 
 const Navbar = () => {
   const navigate = useNavigate();
@@ -55,13 +56,10 @@ const Navbar = () => {
         <div className="flex items-center gap-4 mx-8">
           {user ? (
             <>
-              {user.user_metadata?.avatar_url && (
-                <img
-                  src={user.user_metadata.avatar_url}
-                  alt={user.user_metadata?.full_name || user.email}
-                  className="w-8 h-8 rounded-full border border-orange-400"
-                />
-              )}
+              <ProfileIcon 
+                name={user.user_metadata?.full_name || user.email || 'U'} 
+                imageUrl={user.user_metadata?.avatar_url}
+              />
               <button
                 onClick={handleSignOut}
                 className="text-gray-700 font-medium hover:text-orange-500 cursor-pointer transition transform hover:scale-110 duration-300 whitespace-nowrap"

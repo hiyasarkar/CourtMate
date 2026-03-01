@@ -10,6 +10,7 @@ import Signup from "./pages/signup.jsx"
 import Lawyersignup from "./pages/Lawyersignup.jsx"
 import Lawyerlogin from "./components/Lawyerlogin.jsx"
 import Lawyer from "./pages/Lawyer.jsx"
+import ProfilePage from "./pages/ProfilePage.jsx"
 
 const App = () => {
   return (
@@ -23,6 +24,7 @@ const App = () => {
       <Route path="/lawyersignup" element={<Lawyersignup/>} />
       <Route path="/lawyerlogin" element={<Lawyerlogin/>} />
       <Route path="/lawyer" element={<Lawyer/>} />
+      <Route path="/profile" element={<ProfilePage/>} />
     </Routes>
   )
 }
