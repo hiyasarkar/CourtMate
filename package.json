@@ -1,0 +1,14 @@
+{
+  "name": "courtmate",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "npm run --prefix frontend dev",
+    "build": "npm install --prefix frontend && npm run --prefix frontend build && mkdir -p dist && cp -r frontend/dist/* dist/",
+    "start": "npm run --prefix frontend start"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+  }
+}
