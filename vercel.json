@@ -7,5 +7,5 @@
     }
   ],
   "buildCommand": "cd frontend && npm install && npm run build",
-  "outputDirectory": "dist"
+  "outputDirectory": "frontend/dist"
 }
