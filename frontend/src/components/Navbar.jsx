@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import Logo from "../assets/Logo.png";
 import ProfileIcon from "./ProfileIcon";
@@ -42,13 +42,14 @@ const Navbar = () => {
           >
             <img src={Logo} alt="CourtMate Logo" />
             <span className="font-semibold text-gray-800">
-              CourtMate Unified
+              CourtMate Unified 
             </span>
           </div>
 
-          <div className="hidden md:flex items-center text-gray-700 font-medium gap-16">
+          <div className="hidden md:flex items-center text-gray-700 font-medium gap-8 lg:gap-16">
             <NavLink href="/" detail="Home" />
             <NavLink href="/about" detail="About Us" />
+            <NavLink href="/lawyers" detail="Find a Lawyer" />
             <NavLink href="/contact" detail="Contact Us" />
           </div>
         </nav>
@@ -98,12 +99,12 @@ const Navbar = () => {
 
 const NavLink = ({ href, detail }) => {
   return (
-    <a
-      href={href}
+    <Link
+      to={href}
       className="hover:text-orange-500 transition transform hover:scale-110 duration-300"
     >
       {detail}
-    </a>
+    </Link>
   );
 };
 

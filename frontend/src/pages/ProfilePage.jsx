@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
+import ChatWindow from '../components/ChatWindow.jsx';
 import { 
   Briefcase, Folder, FileText, Gavel, Calendar, CheckSquare, 
   Lightbulb, Filter, MessageSquare, ChevronRight, MapPin, Clock, 
@@ -48,11 +49,21 @@ const CircularProgress = ({ value }) => {
 
 const UserDashboard = ({ user, activeCases, myCases, recommendedLawyers, navigate }) => {
   const name = user?.user_metadata?.full_name?.split(' ')[0] || 'User';
+  const [activeChatCase, setActiveChatCase] = useState(null);
 
   const mostRecentActive = activeCases?.length > 0 ? activeCases[0] : null;
 
   return (
-    <div className="w-full">
+    <div className="w-full relative">
+      {activeChatCase && (
+        <ChatWindow 
+          caseId={activeChatCase.id} 
+          currentUser={user} 
+          otherUser={{ full_name: activeChatCase.lawyer_name || 'Legal Professional' }} 
+          onClose={() => setActiveChatCase(null)} 
+        />
+      )}
+
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
         <div>
@@ -98,6 +109,12 @@ const UserDashboard = ({ user, activeCases, myCases, recommendedLawyers, navigat
                   <div className="flex flex-col items-center justify-center gap-4 bg-[#fbf9f4] p-6 lg:p-8 rounded-2xl w-full md:w-auto h-full border border-orange-50/50">
                      <CircularProgress value={mostRecentActive.confidence_score || 85} />
                      <button onClick={() => navigate('/file-case')} className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2.5 px-6 rounded-full shadow-md transition whitespace-nowrap mt-2">Continue Case</button>
+                     <button 
+                        onClick={() => setActiveChatCase(mostRecentActive)}
+                        className="w-full bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 font-semibold py-2.5 px-6 rounded-full shadow-sm transition whitespace-nowrap flex items-center justify-center gap-2 mt-2"
+                     >
+                       <MessageSquare className="w-4 h-4"/> Message Lawyer
+                     </button>
                   </div>
                </div>
             </div>
@@ -217,9 +234,18 @@ const UserDashboard = ({ user, activeCases, myCases, recommendedLawyers, navigat
 
 const LawyerDashboard = ({ user, lawyerData, lawyerMetrics, newRequests, activeCases, recentActivity, upcomingHearings, navigate }) => {
   const name = user?.user_metadata?.full_name || lawyerData?.full_name || 'Legal Professional';
+  const [activeChatCase, setActiveChatCase] = useState(null);
 
   return (
-    <div className="w-full">
+    <div className="w-full relative">
+       {activeChatCase && (
+        <ChatWindow 
+          caseId={activeChatCase.id} 
+          currentUser={user} 
+          otherUser={{ full_name: activeChatCase.client_name || 'Client' }} 
+          onClose={() => setActiveChatCase(null)} 
+        />
+      )}
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
         <div>
@@ -342,8 +368,9 @@ const LawyerDashboard = ({ user, lawyerData, lawyerMetrics, newRequests, activeC
                          <span className={`px-2.5 py-1 rounded-md text-[10px] whitespace-nowrap font-bold tracking-wide shadow-sm w-fit ${caseItem.status === 'Completed' ? 'bg-green-50 text-green-600 border border-green-100' : 'bg-blue-50 text-blue-600 border border-blue-100'}`}>{caseItem.status || 'Active'}</span>
                        </div>
                        <div className="col-span-3 text-gray-600 font-medium text-sm truncate">{caseItem.next_step || 'Review Documents'}</div>
-                       <div className="col-span-1 flex justify-center">
-                         <button className="text-gray-400 hover:text-gray-800 p-1 rounded-md hover:bg-gray-100 transition"><MoreVertical className="w-5 h-5"/></button>
+                       <div className="col-span-1 flex justify-center gap-2">
+                         <button onClick={() => setActiveChatCase(caseItem)} className="text-gray-400 hover:text-orange-500 p-1 rounded-md hover:bg-orange-50 transition" title="Message Client"><MessageSquare className="w-4 h-4"/></button>
+                         <button className="text-gray-400 hover:text-gray-800 p-1 rounded-md hover:bg-gray-100 transition"><MoreVertical className="w-4 h-4"/></button>
                        </div>
                      </div>
                    )) : (
@@ -541,11 +568,39 @@ export default function ProfilePage() {
      }
   }, []);
 
-  const fetchLawyerDashboardData = React.useCallback(async () => {
-    const { data: casesData } = await supabase.from("cases").select("*").limit(5);
+  const fetchLawyerDashboardData = React.useCallback(async (userId) => {
+    // Determine lawyer ID from DB using Auth ID if necessary, or assume auth.uid is lawyer_id for now
+    // Actually lawyer table likely has id equal to auth.uid or linked.
+    // Let's assume cases have lawyer_id which matches user.id for simplicity or we find it.
+    // Real implementation:
+    const { data: lData } = await supabase.from("lawyers").select("id").eq("user_id", userId).single();
+    
+    // Fallback if lawyer entry not found or using direct auth id
+    const lawyerId = lData?.id || userId; 
+    
+    // We only want cases assigned to THIS lawyer
+    const { data: casesData } = await supabase.from("cases").select("*").eq("lawyer_id", lawyerId).order("created_at", { ascending: false });
+
     if (casesData && casesData.length > 0) {
-      setLawyerActiveCases(casesData.map(c => ({ id: c.id, title: c.description?.substring(0, 20) + "...", client_name: "Platform User", status: c.status || "Active", next_step: "Pending Review" })));
-      setLawyerNewRequests(casesData.slice(0, 3).map(c => ({ title: c.description?.substring(0, 20) + " - Request", amount: "Consultation", loc: c.incident_location || "Remote", created_at: c.created_at })));
+      setLawyerActiveCases(
+        casesData.filter(c => c.status !== 'Pending').map(c => ({ 
+          id: c.id, 
+          title: c.description ? c.description.substring(0, 20) + "..." : "Case #" + c.id.substring(0,6), 
+          client_name: "Client", // In real app, join with profiles table
+          status: c.status || "Active", 
+          next_step: "Review" 
+        }))
+      );
+      setLawyerNewRequests(
+        casesData.filter(c => c.status === 'Pending').map(c => ({ 
+          id: c.id,
+          title: c.description ? c.description.substring(0, 20) + "..." : "New Request", 
+          amount: "Consultation", 
+          loc: c.incident_location || "Remote", 
+          created_at: c.created_at,
+          client_id: c.user_id
+        }))
+      );
     } else {
       setLawyerActiveCases([]);
       setLawyerNewRequests([]);
@@ -563,7 +618,7 @@ export default function ProfilePage() {
       finalRole = "Lawyer";
     }
     if (finalRole === "Lawyer") {
-      fetchLawyerDashboardData();
+      fetchLawyerDashboardData(userId);
     } else {
       fetchUserDashboardData(userId);
     }
