@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "scripts": {
     "dev": "npm run --prefix frontend dev",
-    "build": "npm install --prefix frontend && npm run --prefix frontend build && mkdir -p dist && cp -r frontend/dist/* dist/",
+    "build": "cd frontend && npm install && npm run build",
     "start": "npm run --prefix frontend start"
   },
   "engines": {
